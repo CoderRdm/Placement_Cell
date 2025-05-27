@@ -4,90 +4,64 @@ const app = express();
 const mongoose = require('mongoose');
 const dotenv= require('dotenv');
 const connectToDb = require('./config/db');
-const Studentmodel= require('./model/Student/Student');
 const jwt = require('jsonwebtoken');
 const cookieParser= require('cookie-parser');
 const bcrypt= require('bcrypt');
-
-//PORT
+// Add these at the top with other imports
+const { 
+Student,
+  CurrentProgram,
+  Degree,
+  Specialization,
+  Category,
+  SGPA,
+  Address 
+} = require('./model/Student/Student'); // Adjust path
 const port = 3000;
+const router = require('router');
 
 dotenv.config();
 
 //MIDDLEWARE SETUP
 app.use(express.json());
 app.use(cookieParser());
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Internal server error' });
+});
 
+const StudentRoutes= require('./Routes/Student_Routes');
 
 app.get('/',(req,res)=>{
     res.send("Hello World");
 })
 
+app.use("/Student",StudentRoutes);
 
-//BASIC AUTH SET UP
-const generateToken = (createdStudent) => {
-  return jwt.sign({email: createdStudent.email, id: createdStudent._id},process.env.JWT_SECRET),{
-    expiresIn:'1d'
-  };
-}
-
-app.post('/api/register-Student', async (req, res) => {
-    const { name, email, password, course } = req.body;
-
-    try {
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        const createdStudent = await Studentmodel.create({
-            name,
-            email,
-            password: hashedPassword,
-            course
-        });
-
-       let token = generateToken(createdStudent);
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production"
-        });
-
-        res.status(201).send(createdStudent);
-    } catch (error) {
-        console.error("Registration error:", error.message);
-        res.status(400).send({ error: error.message });
-    }
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: 'Something went wrong!'
+  });
 });
 
-app.post('/api/login-Students',async (req,res) => {
-  try{
-    let{email,password}= req.body;
-    let Student = await Studentmodel.findOne({email:email});
-    if(!Student){
-        res.send("Email or password is incorrect");
-    } bcrypt.compare(password,Student.password, async  function(err,result)  {
-        if(result){
-            let token =generateToken(Student);
-                 res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV != "production"
-      });
+// Handle 404
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
+});
 
-      res.status(200).send({ message: "Login successful", token });
-        }
-        else{
-            res.send("Incorrect password");
-        }
-    })
-  }catch(err){
-    console.log(err.message);
-  }
-})
+const PORT = process.env.PORT || 3000;
 
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
 
-app.post('/api/logout-Student',(req,res) => {
-  res.cookie("token","");
-}
-)
+module.exports = app;
 
 app.listen(port,()=>{
     connectToDb();

@@ -43,11 +43,11 @@ app.use(passport.session());
 
 
 const StudentRoutes= require('./Routes/Student_Routes');
-
+const RecruiterRoutes= require('./Routes/Recruiter_Routes');
 
 
 app.use("/Student",StudentRoutes);
-
+app.use("/R",RecruiterRoutes);
 
 app.use(
   session({

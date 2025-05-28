@@ -30,8 +30,8 @@ const recruiterSchema = new Schema({
 
 const Recruiter = mongoose.model('Recruiter', recruiterSchema);
 
-// Requirements Model (Embedded in JobPosting)
-const requirementsSchema = new Schema({
+// Internship Requirements Model (Embedded in InternshipPosting)
+const internshipRequirementsSchema = new Schema({
   min_cgpa: { type: Number, min: 0, max: 10, required: true },
   allowed_branches: {
     type: [String],
@@ -58,12 +58,12 @@ function arrayLimit(val) {
   return val.length > 0;
 }
 
-// Job Posting Model
-const jobPostingSchema = new Schema({
+// Internship Posting Model
+const internshipPostingSchema = new Schema({
   recruiter_id: { type: Schema.Types.ObjectId, ref: 'Recruiter', required: true },
   title: { type: String, required: true, minlength: 5, maxlength: 100 },
   description: { type: String, required: true, minlength: 50, maxlength: 2000 },
-  requirements: { type: requirementsSchema, required: true },
+  requirements: { type: internshipRequirementsSchema, required: true },
   location: { type: String, required: true, minlength: 2, maxlength: 100 },
   duration: { 
     type: String, 
@@ -80,19 +80,19 @@ const jobPostingSchema = new Schema({
 }, { timestamps: true });
 
 // Add indexes for better performance
-jobPostingSchema.index({ recruiter_id: 1 });
-jobPostingSchema.index({ status: 1 });
-jobPostingSchema.index({ location: 1 });
-jobPostingSchema.index({ 'requirements.allowed_branches': 1 });
-jobPostingSchema.index({ 'requirements.min_cgpa': 1 });
-jobPostingSchema.index({ start_date: 1 });
-jobPostingSchema.index({ title: 'text', description: 'text' });
+internshipPostingSchema.index({ recruiter_id: 1 });
+internshipPostingSchema.index({ status: 1 });
+internshipPostingSchema.index({ location: 1 });
+internshipPostingSchema.index({ 'requirements.allowed_branches': 1 });
+internshipPostingSchema.index({ 'requirements.min_cgpa': 1 });
+internshipPostingSchema.index({ start_date: 1 });
+internshipPostingSchema.index({ title: 'text', description: 'text' });
 
-const JobPosting = mongoose.model('JobPosting', jobPostingSchema);
+const InternshipPosting = mongoose.model('InternshipPosting', internshipPostingSchema);
 
 // Internship Application Model
 const internshipApplicationSchema = new Schema({
-  job_posting_id: { type: Schema.Types.ObjectId, ref: 'JobPosting', required: true },
+  internship_posting_id: { type: Schema.Types.ObjectId, ref: 'InternshipPosting', required: true },
   student_id: { type: Schema.Types.ObjectId, ref: 'Student', required: true },
   recruiter_id: { type: Schema.Types.ObjectId, ref: 'Recruiter', required: true },
   status: { 
@@ -106,22 +106,22 @@ const internshipApplicationSchema = new Schema({
 }, { timestamps: true });
 
 // Add compound indexes for common queries
-internshipApplicationSchema.index({ job_posting_id: 1, status: 1 });
+internshipApplicationSchema.index({ internship_posting_id: 1, status: 1 });
 internshipApplicationSchema.index({ student_id: 1, status: 1 });
 internshipApplicationSchema.index({ recruiter_id: 1, status: 1 });
 internshipApplicationSchema.index({ applied_date: -1 });
 
-// Ensure a student can apply only once per job posting
-internshipApplicationSchema.index({ job_posting_id: 1, student_id: 1 }, { unique: true });
+// Ensure a student can apply only once per internship posting
+internshipApplicationSchema.index({ internship_posting_id: 1, student_id: 1 }, { unique: true });
 
 const InternshipApplication = mongoose.model('InternshipApplication', internshipApplicationSchema);
 
 // Pre-save middleware to validate recruiter consistency in applications
 internshipApplicationSchema.pre('save', async function(next) {
   if (this.isNew) {
-    const jobPosting = await JobPosting.findById(this.job_posting_id);
-    if (jobPosting && jobPosting.recruiter_id.toString() !== this.recruiter_id.toString()) {
-      return next(new Error('Application recruiter_id must match job posting recruiter_id'));
+    const internshipPosting = await InternshipPosting.findById(this.internship_posting_id);
+    if (internshipPosting && internshipPosting.recruiter_id.toString() !== this.recruiter_id.toString()) {
+      return next(new Error('Application recruiter_id must match internship posting recruiter_id'));
     }
   }
   next();
@@ -129,6 +129,6 @@ internshipApplicationSchema.pre('save', async function(next) {
 
 module.exports = {
   Recruiter,
-  JobPosting,
+  InternshipPosting,
   InternshipApplication
 };
